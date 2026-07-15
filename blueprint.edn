@@ -1,0 +1,55 @@
+{:itonami.blueprint/id "cloud-itonami-isic-0240"
+ :itonami.blueprint/name "Support Services To Forestry Coordination"
+ :itonami.blueprint/isic-rev5 "0240"
+ :itonami.blueprint/domain :forestry/support-services
+ :itonami.blueprint/license "AGPL-3.0-or-later"
+ :itonami.blueprint/social-impact [:forest-health :fire-risk-reduction :contract-labor-efficiency]
+ :itonami.blueprint/governor :forestrysupport-governor
+ :itonami.blueprint/robotics false
+ :itonami.blueprint/required-technologies [:identity :forms :audit-ledger]
+ :itonami.blueprint/optional-technologies [:telemetry]
+ :itonami.blueprint/status :public-oss
+ :itonami.blueprint/maturity :implemented
+ :itonami.blueprint/implemented-slice
+ "`:forestrysupport-governor` is implemented end-to-end in
+ `src/forestrysupport` as a FORESTRY-SUPPORT-SERVICE OPERATIONS
+ COORDINATION actor -- ForestrySupport Advisor (LLM proposal-only) ⊣
+ Forestry-Support Operations Governor (closed-op-allowlist /
+ service-order-registration-before-any-action hard-gate /
+ operator-certification-equipment-inspection-wind-speed-riparian-buffer-
+ load-limit hard-gates / unresolved-forest-health-flag hard-gate /
+ forestry-equipment-and-fire-tactic-decision permanent block).
+ `:itonami.blueprint/robotics` is honestly `false` -- this actor holds NO
+ chainsaw/skidder/patrol-vehicle field-equipment-control authority (a
+ HARD, permanent governor block, never overridable by human approval --
+ see `forestrysupport.governor` ns docstring). ISIC Rev.5 0240 covers
+ CONTRACT LOGGING-SUPPORT SERVICES for OTHER forest operators on a
+ fee/contract basis -- timber cruising, forest-fire-protection support
+ (patrol / fuel-break maintenance support, NOT firefighting/suppression
+ itself), seed collection, transport of logs within the forest -- the
+ operator never fells or owns the standing timber being serviced, which
+ is what distinguishes this actor from actual timber-harvesting divisions
+ (022x) themselves. Every one of its four proposal ops
+ (`:log-service-record` / `:schedule-field-operation` /
+ `:flag-forest-health-concern` / `:order-supplies`) carries `:effect
+ :propose` ONLY -- the governor HARD-holds any proposal that doesn't
+ (`effect-not-propose-violations`). Service types split into
+ survey/collection (timber cruising, seed collection -- no
+ field-equipment-operation safety window at all) and field-equipment-
+ operation (forest-fire-protection support, in-forest log transport -- a
+ genuine field-equipment-operator certification requirement, an
+ equipment-inspection interval, and -- where physically applicable to
+ that specific service -- a maximum fieldwork wind speed, a minimum
+ riparian buffer, and a maximum haul-road load) -- the Governor's
+ field-equipment-specific checks are skipped entirely, never fabricated,
+ for survey/collection service types, and even within the
+ field-equipment-operation category not every physical-constraint field
+ applies to every service type (e.g. in-forest log transport has no
+ fieldwork wind-speed ceiling of its own; fire-protection-support patrol/
+ fuel-break work carries no haul-road load limit). `:flag-forest-health-
+ concern` always escalates to a human, at every phase, regardless of
+ advisor confidence; `:order-supplies` above a cost threshold likewise
+ always escalates. This build ships NO JVM-only interop anywhere in
+ `src/` (all source is `.cljc`) per this workspace's cljs-first
+ runtime-priority rule. See `README.md` for the full governor-check
+ enumeration."}
