@@ -1,19 +1,118 @@
 (ns forestrysupport.sim
-  "Simulation driver for testing the forestry-support-services operations
-  actor end-to-end.
+  "Demo driver -- `clojure -M:run` / `clojure -M:dev:run`. Drives the REAL
+  compiled `langgraph-clj` `StateGraph` (`forestrysupport.operation/build`)
+  end-to-end through an auto-commit scheduling proposal, an
+  always-escalating service-record log (dispatcher approves), an
+  always-escalating service-record log (dispatcher rejects), and the HARD
+  governor-block scenarios (out-of-allowlist op, unregistered service
+  order), then prints the resulting audit ledger. Mirrors `transportops.sim`
+  (cloud-itonami-isic-869).
 
-  For CLI: clojure -M:dev:run
+  FIX: this replaces a stub `-main` that printed 'not yet implemented' and
+  never called `forestrysupport.operation`, `forestrysupport.advisor`, or
+  `forestrysupport.store` at all."
+  (:require [langgraph.graph :as g]
+            [forestrysupport.store :as store]
+            [forestrysupport.operation :as operation]))
 
-  Example flow:
-    1. Start with empty store
-    2. Register a service order in :intake phase
-    3. Propose a service order -> :record transition with safety
-       parameters (operator certification / equipment inspection / wind
-       speed / riparian buffer / haul-road load)
-    4. Governor validates parameters against facts
-    5. If valid, audit fact is committed
-    6. CLI prints audit trail")
+(def ^:private now-ms #?(:clj (System/currentTimeMillis) :cljs (.now js/Date)))
+(def ^:private ten-days-ago (- now-ms (* 10 24 60 60 1000)))
+(def ^:private ten-days-from-now (+ now-ms (* 10 24 60 60 1000)))
+
+(def ^:private clean-fire-support-order
+  "A registered, fully-compliant field-equipment-operation service order
+  (fire-protection-support) -- current certification/inspection, wind
+  and riparian buffer within range, evidence checklist complete."
+  {:service-type :fire-support/patrol-and-fuelbreak-maintenance
+   :jurisdiction :jp/maff
+   :client-forest-operator-id "forest-42"
+   :operator-certification-expiry-date ten-days-from-now
+   :equipment-last-inspection-date ten-days-ago
+   :wind-speed-kmh 10.0
+   :riparian-buffer-actual-m 20.0
+   :evidence-checklist [:service-order-record :forest-boundary-map :field-log
+                        :operator-certification :equipment-inspection-record
+                        :riparian-buffer-assessment]})
+
+(defn scenario [title]
+  (println "\n" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=")
+  (println (str "Scenario: " title))
+  (println "=" "=" "=" "=" "=" "=" "=" "=" "=" "="))
+
+(defn- exec-op [actor tid request]
+  (g/run* actor {:request request} {:thread-id tid}))
+
+(defn- approve! [actor tid]
+  (g/run* actor {:approval {:status :approved :by "dispatcher-01"}}
+          {:thread-id tid :resume? true}))
+
+(defn- reject! [actor tid]
+  (g/run* actor {:approval {:status :rejected :by "dispatcher-01"}}
+          {:thread-id tid :resume? true}))
+
+(defn demo
+  "Run the compiled StateGraph through an auto-commit scheduling proposal,
+  an always-escalating service-record log (approved, then a separate run
+  rejected), and the HARD-block scenarios (out-of-allowlist op,
+  unregistered service order); print each result and the final audit
+  ledger."
+  []
+  (println "Forestry-Support-Service Operations Coordination Actor - Demo")
+
+  (scenario "Clean :schedule-field-operation auto-commits (not a high-stakes op)")
+  (let [s (store/mem-store {"order-001" clean-fire-support-order})
+        actor (operation/build s)
+        result (exec-op actor "t1" {:op :schedule-field-operation :subject "order-001"})]
+    (println (:state result))
+    (println "Decision:" (:decision (:state result)))
+    (println "Ledger:" (store/ledger s)))
+
+  (scenario "Always-escalating: log-service-record (dispatcher APPROVES)")
+  (let [s (store/mem-store {"order-002" clean-fire-support-order})
+        actor (operation/build s)
+        held (exec-op actor "t2" {:op :log-service-record :subject "order-002"})]
+    (println "Status:" (:status held) "Frontier:" (:frontier held))
+    (println "Ledger while interrupted (must be empty -- not yet committed):" (store/ledger s))
+    (println "-- dispatcher approves --")
+    (let [approved (approve! actor "t2")]
+      (println (:state approved))
+      (println "Decision:" (:decision (:state approved)))
+      (println "order-002 :logged?" (:logged? (store/service-order (store/current s) "order-002")))
+      (println "Ledger:" (store/ledger s))))
+
+  (scenario "Always-escalating: log-service-record (dispatcher REJECTS)")
+  (let [s (store/mem-store {"order-003" clean-fire-support-order})
+        actor (operation/build s)
+        _held (exec-op actor "t3" {:op :log-service-record :subject "order-003"})
+        rejected (reject! actor "t3")]
+    (println (:state rejected))
+    (println "Decision:" (:decision (:state rejected)))
+    (println "order-003 :logged? (must stay false -- never committed)"
+             (:logged? (store/service-order (store/current s) "order-003")))
+    (println "Ledger:" (store/ledger s)))
+
+  (scenario "HARD-block: out-of-allowlist op (direct forestry-equipment operation)")
+  (let [s (store/mem-store {"order-004" clean-fire-support-order})
+        actor (operation/build s)
+        result (exec-op actor "t4" {:op :operate-chainsaw :subject "order-004"})]
+    (println "Decision:" (:decision (:state result))
+             "Audit:" (:audit (:state result)))
+    (println "Ledger:" (store/ledger s)))
+
+  (scenario "HARD-block: unregistered service order")
+  (let [s (store/mem-store {})
+        actor (operation/build s)
+        result (exec-op actor "t5" {:op :schedule-field-operation :subject "order-999"})]
+    (println "Decision:" (:decision (:state result))
+             "Audit:" (:audit (:state result)))
+    (println "Ledger:" (store/ledger s)))
+
+  (println "\n" "=" "=" "=" "=" "=" "=" "=" "=" "=" "=")
+  (println "Demo completed successfully")
+  (println "=" "=" "=" "=" "=" "=" "=" "=" "=" "="))
 
 (defn -main [& _args]
-  (println "ForestrySupport simulation: not yet implemented.")
-  (println "TODO: integrate langgraph-clj StateGraph when available."))
+  (demo))
+
+(comment
+  (demo))

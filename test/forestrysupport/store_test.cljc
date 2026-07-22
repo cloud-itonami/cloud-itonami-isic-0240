@@ -96,3 +96,55 @@
           result (store/append-fact st fact)]
       (is (= (count (:facts result)) 1))
       (is (= (first (:facts result)) fact)))))
+
+;; ──────────────────────── MemStore (stateful actor-facing wrapper) ──────────────────────
+;;
+;; `MemStore` composes the pure functions above around a single mutable
+;; atom -- it is what `forestrysupport.operation/build` closes over so a
+;; real actor run can genuinely mutate the SSoT and append to the ledger.
+;; Before this fix nothing in `src/` used the pure functions above at
+;; all; these tests pin down the wrapper's own mutation semantics
+;; directly (operation-test.cljc exercises it end-to-end through the
+;; compiled graph).
+
+(deftest mem-store-starts-empty-by-default
+  (testing "an empty mem-store has no registered service orders and an empty ledger"
+    (let [s (store/mem-store)]
+      (is (= {:service-orders {} :facts []} (store/current s)))
+      (is (empty? (store/ledger s))))))
+
+(deftest mem-store-seeds-service-orders
+  (testing "mem-store seeded with service orders makes them immediately readable via `current`"
+    (let [order {:service-type :survey/timber-cruising :client-forest-operator-id "forest-1"}
+          s (store/mem-store {"order-001" order})]
+      (is (= order (store/service-order (store/current s) "order-001")))
+      (is (true? (store/service-order-registered? (store/current s) "order-001")))
+      (is (false? (store/service-order-registered? (store/current s) "order-999"))))))
+
+(deftest mem-store-commit-log-service-record-mutates-in-place
+  (testing "commit-log-service-record! is a genuine, visible-to-later-reads mutation"
+    (let [s (store/mem-store {"order-001" {:service-type :survey/timber-cruising}})]
+      (is (nil? (:logged? (store/service-order (store/current s) "order-001"))))
+      (store/commit-log-service-record! s "order-001" {:service-type :survey/timber-cruising :field-notes "complete"})
+      (let [order (store/service-order (store/current s) "order-001")]
+        (is (true? (:logged? order)))
+        (is (= "complete" (:field-notes order)))))))
+
+(deftest mem-store-commit-schedule-mutates-in-place
+  (testing "commit-schedule! is a genuine, visible-to-later-reads mutation"
+    (let [s (store/mem-store {"order-001" {:service-type :survey/timber-cruising}})]
+      (is (nil? (:scheduled? (store/service-order (store/current s) "order-001"))))
+      (store/commit-schedule! s "order-001")
+      (is (true? (:scheduled? (store/service-order (store/current s) "order-001")))))))
+
+(deftest mem-store-append-ledger-accumulates
+  (testing "append-ledger! accumulates facts in append order, visible via `ledger`"
+    (let [s (store/mem-store)
+          fact1 {:t :committed :op :schedule-field-operation}
+          fact2 {:t :governor-hold :op :log-service-record}]
+      (is (empty? (store/ledger s)))
+      (store/append-ledger! s fact1)
+      (is (= [fact1] (store/ledger s)))
+      (store/append-ledger! s fact2)
+      (is (= [fact1 fact2] (store/ledger s))
+          "append-only -- earlier facts are never overwritten or reordered"))))

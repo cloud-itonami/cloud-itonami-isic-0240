@@ -34,7 +34,18 @@
     - :scheduled? true once a `:schedule-field-operation` proposal commits
 
   The ledger (`:facts`) is a separate append-only vector of audit facts,
-  kept alongside `:service-orders` in the same store value.")
+  kept alongside `:service-orders` in the same store value.
+
+  `MemStore` (below) is a thin atom wrapper around this plain-data value,
+  composing the pure functions above -- it exists because
+  `forestrysupport.operation/build`'s compiled StateGraph needs ONE
+  mutable SSoT instance it can close over across graph nodes within a
+  single actor run (and across a human-in-the-loop resume), the same
+  role `transportops.store/MemStore` plays for the ISIC-869 sibling
+  actor. Before this was added, `log-service-record`/`mark-scheduled`/
+  `append-fact` were called ONLY from `forestrysupport.store-test` --
+  no real execution path ever mutated a service order or appended to
+  the audit ledger.")
 
 (defn service-order
   "Retrieve a service order by id, or nil if it does not exist / is not
@@ -77,3 +88,44 @@
   "Append `fact` to the store's audit ledger."
   [st fact]
   (update st :facts (fnil conj []) fact))
+
+;; ----------------------------- Stateful actor-facing wrapper -----------------------------
+
+(defprotocol Store
+  (current [s]
+    "Current plain-map store value (`{:service-orders .. :facts ..}`) --
+    pass this to the pure read functions above / `forestrysupport.advisor`/
+    `forestrysupport.governor`.")
+  (commit-log-service-record! [s service-order-id order-data]
+    "Apply a committed `:log-service-record` proposal -- delegates to
+    `log-service-record` above.")
+  (commit-schedule! [s service-order-id]
+    "Apply a committed `:schedule-field-operation` proposal -- delegates
+    to `mark-scheduled` above.")
+  (ledger [s] "The append-only immutable decision-fact log.")
+  (append-ledger! [s fact]
+    "Append one immutable decision fact -- delegates to `append-fact`
+    above. Returns `fact`."))
+
+(defrecord MemStore [a]
+  Store
+  (current [_] @a)
+  (commit-log-service-record! [_ service-order-id order-data]
+    (swap! a log-service-record service-order-id order-data)
+    nil)
+  (commit-schedule! [_ service-order-id]
+    (swap! a mark-scheduled service-order-id)
+    nil)
+  (ledger [_] (audit-trail @a))
+  (append-ledger! [_ fact]
+    (swap! a append-fact fact)
+    fact))
+
+(defn mem-store
+  "A `MemStore` seeded with an explicit `service-orders` map
+  (service-order-id string -> service-order map). `service-orders` may
+  be empty (an unregistered-everywhere store) -- the deterministic
+  default for dev/tests/demo (no external deps)."
+  ([] (mem-store {}))
+  ([service-orders]
+   (->MemStore (atom {:service-orders service-orders :facts []}))))
