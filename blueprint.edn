@@ -11,14 +11,41 @@
  :itonami.blueprint/status :public-oss
  :itonami.blueprint/maturity :implemented
  :itonami.blueprint/implemented-slice
- "`:forestrysupport-governor` is implemented end-to-end in
- `src/forestrysupport` as a FORESTRY-SUPPORT-SERVICE OPERATIONS
- COORDINATION actor -- ForestrySupport Advisor (LLM proposal-only) ⊣
- Forestry-Support Operations Governor (closed-op-allowlist /
- service-order-registration-before-any-action hard-gate /
- operator-certification-equipment-inspection-wind-speed-riparian-buffer-
- load-limit hard-gates / unresolved-forest-health-flag hard-gate /
- forestry-equipment-and-fire-tactic-decision permanent block).
+ "ForestrySupportAdvisor (`forestrysupport.advisor`) ⊣ Forestry-Support
+ Operations Governor (`forestrysupport.governor`), composed by
+ `forestrysupport.operation/build` into a REAL compiled `langgraph-clj`
+ StateGraph (`langgraph.graph`, `state-graph`/`add-node`/
+ `add-conditional-edges`/`compile-graph`): `:intake -> :advise -> :govern
+ -> :decide -+-> :commit / :request-approval -> :commit / :hold`, with
+ `interrupt-before #{:request-approval}` + in-memory checkpointer for
+ real human-in-the-loop resume. Append-only audit ledger
+ (`forestrysupport.store/ledger` + `append-ledger!`, `MemStore`) is wired
+ into the compiled graph's own `:commit` and `:hold` nodes.
+
+ Fixes THREE compounding gaps found in the prior scaffold (2026-07-16,
+ `c34cd28`): (1) `deps.edn` declared the real
+ `io.github.kotoba-lang/langgraph` coordinate only inside the `:dev`
+ alias's `:override-deps`, which REPLACES an already-present dependency
+ rather than adding one -- with base `:deps {}` this override was inert
+ on every path, so no real StateGraph ever compiled or ran; the
+ coordinate now lives in top-level `:deps`, the actually-used path. (2)
+ `forestrysupport.advisor` was a docstring-only skeleton with NO
+ protocol and NO function, never `:require`d from `src/` -- completely
+ dead code despite its own docstring's production claims; it is now a
+ real `Advisor` protocol + `MockAdvisor`, genuinely consulted from the
+ compiled graph's `:advise` node (proven in `operation-test.cljc` by
+ swapping in custom `Advisor` implementations and observing the
+ Governor's routing and the committed ledger record change accordingly
+ -- not a hardcoded pass). (3) `forestrysupport.store`'s
+ `log-service-record`/`mark-scheduled`/`append-fact` were called ONLY
+ from `store-test.cljc`, never from any real execution path -- a new
+ `Store` protocol + `MemStore` (atom-backed, composing those same pure
+ functions) is now the actor's single mutable SSoT, closed over by
+ `operation/build` and mutated ONLY from the compiled graph's real
+ `:commit`/`:hold` nodes; `store-test.cljc` and `operation-test.cljc`
+ both assert the ledger stays empty until a genuine commit/hold executes
+ and that a governor-hold or a rejected approval NEVER touches the SSoT.
+
  `:itonami.blueprint/robotics` is honestly `false` -- this actor holds NO
  chainsaw/skidder/patrol-vehicle field-equipment-control authority (a
  HARD, permanent governor block, never overridable by human approval --
@@ -46,10 +73,10 @@
  field-equipment-operation category not every physical-constraint field
  applies to every service type (e.g. in-forest log transport has no
  fieldwork wind-speed ceiling of its own; fire-protection-support patrol/
- fuel-break work carries no haul-road load limit). `:flag-forest-health-
- concern` always escalates to a human, at every phase, regardless of
- advisor confidence; `:order-supplies` above a cost threshold likewise
- always escalates. This build ships NO JVM-only interop anywhere in
- `src/` (all source is `.cljc`) per this workspace's cljs-first
- runtime-priority rule. See `README.md` for the full governor-check
- enumeration."}
+ fuel-break work carries no haul-road load limit). `:log-service-record`
+ and `:flag-forest-health-concern` always escalate to a human via the
+ compiled graph's `:request-approval` node, regardless of advisor
+ confidence; `:order-supplies` above a cost threshold likewise always
+ escalates. This build ships NO JVM-only interop anywhere in `src/` (all
+ source is `.cljc`) per this workspace's cljs-first runtime-priority
+ rule. See `README.md` for the full governor-check enumeration."}

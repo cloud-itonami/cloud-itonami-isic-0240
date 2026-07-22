@@ -4,6 +4,18 @@
 
 A distributed actor for autonomous, compliant coordination of contract forestry-support-service operations: service-order intake → stand/forest-condition survey → scheduling advice → timber-cruising/fire-protection-support/seed-collection/log-transport field work → service-record logging → compliance audit. Sealed LLM advisor; independent Governor enforcement; append-only audit ledger. **Not forestry-equipment operation.** Chainsaw/skidder/patrol-vehicle operation remains exclusive to licensed field-equipment operators, and this actor never finalizes a fire-suppression-tactic decision on its own.
 
+**Maturity: `:implemented`.** `src/forestrysupport/` implements the `ForestrySupportAdvisor` (`forestrysupport.advisor`) and the independent Forestry-Support Operations Governor (`forestrysupport.governor`), composed by `forestrysupport.operation/build` into a **real** compiled `langgraph-clj` `StateGraph` (`langgraph.graph/state-graph` + `compile-graph`): `intake -> advise -> govern -> decide -> commit | request-approval -> commit | hold`, with `interrupt-before #{:request-approval}` and checkpoint-based human-in-the-loop resume for escalated operations. Every commit/hold/approval-rejected decision fact is appended to `forestrysupport.store`'s append-only audit ledger (`ledger`/`append-ledger!`, `MemStore`), reachable only from the compiled graph's own `:commit`/`:hold` nodes.
+
+## Module shape
+
+- `forestrysupport.store` — pure read/write functions over `{:service-orders .. :facts ..}`, plus a `Store` protocol + atom-backed `MemStore` composing them (the actor's single mutable SSoT)
+- `forestrysupport.advisor` — `Advisor` protocol + `MockAdvisor` (deterministic, real-LLM seam via `llm-advisor`)
+- `forestrysupport.governor` — the independent compliance layer: closed op-allowlist, service-order-registration hard-gate, certification/inspection/wind/buffer/load hard-gates, unresolved-forest-health-flag hard-gate, forestry-equipment/fire-tactic-decision permanent block, escalation gate
+- `forestrysupport.facts` / `forestrysupport.registry` — jurisdiction/service-type reference data and pure safety-window predicates the Governor calls
+- `forestrysupport.phase` — the service order's own lifecycle state machine (`:intake -> :survey -> :advise -> :treat -> :record -> :audit`); documentary/tracking, not a rollout-eligibility gate for the Governor
+- `forestrysupport.operation` — compiles the `langgraph-clj` `StateGraph`: intake → advise → govern → decide → commit | request-approval → commit | hold
+- `forestrysupport.sim` — demo runner (`clojure -M:run` / `clojure -M:dev:run`)
+
 ## Scope
 
 This actor coordinates **contract logging-support operations** performed for OTHER forest operators on a fee/contract basis — the operator never fells or owns the standing timber being serviced, which is what distinguishes ISIC 0240 from the actual timber-harvesting divisions (022x) themselves:
@@ -61,23 +73,26 @@ Any proposal for an operation outside this allowlist — most importantly anythi
 ## Testing
 
 ```bash
-# Run full test suite
-clojure -M:test
+# Run full test suite (langgraph/langchain resolved via local sibling checkouts)
+clojure -M:dev:test
 
 # Check code quality
 clojure -M:lint
 
-# Run demo simulation
-clojure -M:run
+# Run demo simulation -- drives the compiled StateGraph end-to-end
+clojure -M:dev:run
 ```
+
+`:dev` pins the transitive `langchain` dependency to the in-monorepo local checkout (`../../kotoba-lang/langchain`) for offline workspace development; a standalone fork should override `deps.edn`'s `:local/root` coordinates with git coordinates instead (see below).
 
 ## Standalone Use
 
 This repo is **forkable outside the workspace**. If cloning standalone (not in the kotoba-lang monorepo), override `:local/root` paths in `deps.edn`:
 
 ```clojure
-{:deps {io.github.kotoba-lang/langchain {:git/url "https://github.com/kotoba-lang/langchain" :git/tag "v0.1.0"}
-        io.github.kotoba-lang/langgraph {:git/url "https://github.com/kotoba-lang/langgraph" :git/tag "v0.1.0"}}}
+{:deps {io.github.kotoba-lang/langgraph {:git/url "https://github.com/kotoba-lang/langgraph" :git/tag "v0.1.0"}}
+ :aliases {:dev {:override-deps
+                 {io.github.kotoba-lang/langchain {:git/url "https://github.com/kotoba-lang/langchain" :git/tag "v0.1.0"}}}}}
 ```
 
 ## License
