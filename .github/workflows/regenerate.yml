@@ -1,0 +1,43 @@
+name: regenerate-board
+on:
+  schedule:
+    - cron: '19 19 * * *'
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: orgs/cloud-itonami/cloud-itonami-isic-0240 }
+      - uses: actions/checkout@v4
+        with: {repository: kotoba-lang/langgraph, path: orgs/kotoba-lang/langgraph}
+      - uses: actions/checkout@v4
+        with: {repository: kotoba-lang/langchain, path: orgs/kotoba-lang/langchain}
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+      - uses: DeLaGuardo/setup-clojure@13.0
+        with: { cli: latest }
+      - name: regenerate through the real actor
+        working-directory: orgs/cloud-itonami/cloud-itonami-isic-0240
+        run: clojure -M:dev:render-html
+      - name: verify (real output, not scaffolding)
+        working-directory: orgs/cloud-itonami/cloud-itonami-isic-0240
+        run: |
+          grep -q 'forestrysupport.render-html' docs/samples/operator-console.html
+          grep -q '<tbody>' docs/samples/operator-console.html
+          test "$(wc -l < docs/samples/operator-console.html)" -gt 30
+          echo "operator console sanity ok"
+      - name: commit when changed
+        working-directory: orgs/cloud-itonami/cloud-itonami-isic-0240
+        run: |
+          git add docs/
+          if ! git diff --cached --quiet; then
+            git config user.name "regenerate-board[bot]"
+            git config user.email "noreply@github.com"
+            git commit -m "chore(board): nightly regeneration through the actor"
+            git push
+          else
+            echo "board unchanged"
+          fi
