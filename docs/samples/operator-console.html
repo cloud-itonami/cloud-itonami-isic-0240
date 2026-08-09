@@ -1,0 +1,60 @@
+<html><head><meta charset="utf-8"><title>cloud-itonami-isic-0240 · forestrysupport</title><style>
+body{font:14px/1.5 -apple-system,system-ui,sans-serif;margin:0;color:#1a1a1a;background:#f5f5f5}
+.bar{background:#1a3a1a;color:#fff;padding:1.2rem 2rem}.bar h1{margin:0;font-size:1.15rem;font-weight:600}
+.badge{display:inline-block;margin-top:.4rem;font-size:.75rem;opacity:.8}
+main{max-width:980px;margin:1.5rem auto;padding:0 1rem}
+.card{background:#fff;border-radius:8px;padding:1.2rem 1.4rem;margin-bottom:1.2rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{margin-top:0;font-size:1rem}.muted{color:#777;font-size:.82rem}
+table{border-collapse:collapse;width:100%;font-size:.85rem}th,td{text-align:left;padding:.42rem .5rem;border-bottom:1px solid #eee}th{font-weight:600;color:#555}
+.ok{color:#0a7d33}.warn{color:#9a6700}.critical{color:#b41010;font-weight:600}
+code{background:#f0f0f0;padding:.1rem .3rem;border-radius:3px;font-size:.8rem}
+</style></head><body>
+<header class="bar">
+  <h1>Forestry support ops (ISIC 0240) — Operator Console</h1>
+  <span class="badge">read-only sample · governor-gated · log-service-record always human-approved · direct equipment permanently blocked</span>
+</header>
+<main>
+  <section class="card">
+    <h2>Service orders</h2>
+    <p class="muted">Demo snapshot — build-time-generated from <code>forestrysupport.store</code> via <code>forestrysupport.render-html</code> (<code>clojure -M:dev:render-html</code>), regenerated nightly. No invented data. Domain: <code>forestrysupport</code>.</p>
+    <table>
+      <thead><tr><th>Order</th><th>Service type</th><th>Client forest operator</th><th>Flags</th><th>Last op status</th></tr></thead>
+      <tbody>
+        <tr><td>order-001</td><td>:fire-support/patrol-and-fuelbreak-maintenance</td><td>forest-42</td><td>scheduled</td><td><span class="ok">committed</span></td></tr>
+        <tr><td>order-002</td><td>:fire-support/patrol-and-fuelbreak-maintenance</td><td>forest-42</td><td>logged</td><td><span class="ok">committed</span></td></tr>
+        <tr><td>order-003</td><td>:fire-support/patrol-and-fuelbreak-maintenance</td><td>forest-42</td><td>registered</td><td><span class="critical">rejected</span></td></tr>
+        <tr><td>order-004</td><td>:fire-support/patrol-and-fuelbreak-maintenance</td><td>forest-42</td><td>registered</td><td><span class="critical">HARD hold &middot; op-not-allowed</span></td></tr>
+        <tr><td>order-999</td><td>:unregistered</td><td>—</td><td>—</td><td><span class="critical">HARD hold &middot; service-order-not-registered</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Action gate (ForestrySupport Governor)</h2>
+    <p class="muted">HARD holds cannot be overridden. This actor coordinates support services to forestry for OTHER forest operators — it never operates chainsaws/skidders/patrol vehicles and never finalizes fire-suppression tactics.</p>
+    <table>
+      <thead><tr><th>Op</th><th>Gate</th></tr></thead>
+      <tbody>
+        <tr><td><code>:schedule-field-operation</code></td><td><span class="ok">auto-commit when clean (not high-stakes)</span></td></tr>
+        <tr><td><code>:log-service-record</code></td><td><span class="warn">ALWAYS human approval (high-stakes actuation)</span></td></tr>
+        <tr><td><code>:flag-forest-health-concern</code></td><td><span class="warn">ALWAYS human approval (never auto-resolved)</span></td></tr>
+        <tr><td><code>:order-supplies</code></td><td><span class="warn">human approval over cost threshold</span></td></tr>
+        <tr><td><code>:operate-chainsaw</code> (etc.)</td><td><span class="critical">HARD out-of-allowlist — direct forestry equipment never in scope</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Audit ledger (this run)</h2>
+    <p class="muted">Append-only decision-fact log — every proposal, hold and commit this scenario produced through the real StateGraph.</p>
+    <table>
+      <thead><tr><th>Fact</th><th>Op</th><th>Subject</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td>committed</td><td><code>schedule-field-operation</code></td><td>order-001</td><td>:jp/maff</td></tr>
+        <tr><td>committed</td><td><code>log-service-record</code></td><td>order-002</td><td>:jp/maff</td></tr>
+        <tr><td>approval-rejected</td><td><code>log-service-record</code></td><td>order-003</td><td>hold</td></tr>
+        <tr><td>governor-hold</td><td><code>operate-chainsaw</code></td><td>order-004</td><td>op-not-allowed</td></tr>
+        <tr><td>governor-hold</td><td><code>schedule-field-operation</code></td><td>order-999</td><td>service-order-not-registered</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+</body></html>
