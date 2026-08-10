@@ -88,9 +88,10 @@
 (defn- last-fact-for [ledger oid]
   (last (filter #(= (:subject %) oid) ledger)))
 
-(defn- hold-rule [f]
+(defn- hold-rule
   "hold-fact carries both :basis (vector of rule keywords) and
   :violations (vector of {:rule ..} maps). Prefer :basis, fall back."
+  [f]
   (or (first (:basis f))
       (some-> f :violations first :rule)))
 
