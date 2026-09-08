@@ -6,7 +6,12 @@
  ;; inside the monorepo checkout -- a standalone fork should override it
  ;; with git coordinates (see the "Standalone Use" section in README.md).
  ;;
- ;; FIX (was `:deps {}` with the real coordinate only reachable via the
+ ;; FIX (was `:deps {
+        ;; kotoba.lang.text, not clojure.string. Pinned as an explicit floor:
+        ;; tools.deps takes the NEWEST sha it is shown, so without a floor here
+        ;; this repo silently rides whatever a sibling happens to name.
+        io.github.kotoba-lang/text {:git/sha "73bdb13ae7a3d004b44bca08be03a3191157a38f"}
+       }` with the real coordinate only reachable via the
  ;; :dev alias's :override-deps): `:override-deps` REPLACES an existing
  ;; dependency already present in the resolved dep graph -- it does not
  ;; ADD a new one. With `:deps {}` there was nothing named

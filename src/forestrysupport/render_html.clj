@@ -17,7 +17,7 @@
   `forestrysupport.sim`'s relative epoch-ms helpers.
 
   Usage: `clojure -M:dev:render-html [out-file]`."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [forestrysupport.store :as store]
             [forestrysupport.operation :as op]
             [langgraph.graph :as g]))
