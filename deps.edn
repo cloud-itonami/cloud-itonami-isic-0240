@@ -6,12 +6,7 @@
  ;; inside the monorepo checkout -- a standalone fork should override it
  ;; with git coordinates (see the "Standalone Use" section in README.md).
  ;;
- ;; FIX (was `:deps {
-        ;; kotoba.lang.text, not clojure.string. Pinned as an explicit floor:
-        ;; tools.deps takes the NEWEST sha it is shown, so without a floor here
-        ;; this repo silently rides whatever a sibling happens to name.
-        io.github.kotoba-lang/text {:git/sha "73bdb13ae7a3d004b44bca08be03a3191157a38f"}
-       }` with the real coordinate only reachable via the
+ ;; FIX (was `:deps {}` with the real coordinate only reachable via the
  ;; :dev alias's :override-deps): `:override-deps` REPLACES an existing
  ;; dependency already present in the resolved dep graph -- it does not
  ;; ADD a new one. With `:deps {}` there was nothing named
@@ -21,7 +16,12 @@
  ;; coordinate to top-level :deps (the actually-used path) fixes this;
  ;; :dev now only does what its name says -- pin the *transitive*
  ;; langchain dependency to the local workspace checkout.
- :deps {io.github.kotoba-lang/langgraph
+ :deps {
+        ;; kotoba.lang.text, not clojure.string. Pinned as an explicit floor:
+        ;; tools.deps takes the NEWEST sha it is shown, so without a floor here
+        ;; this repo silently rides whatever a sibling happens to name.
+        io.github.kotoba-lang/text {:git/sha "73bdb13ae7a3d004b44bca08be03a3191157a38f"}
+       io.github.kotoba-lang/langgraph
         {:local/root "../../kotoba-lang/langgraph"}}
  :aliases
  {;; offline workspace dev -- pin transitive langchain to local checkout
