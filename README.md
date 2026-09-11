@@ -14,7 +14,7 @@ A distributed actor for autonomous, compliant coordination of contract forestry-
 - `forestrysupport.facts` / `forestrysupport.registry` — jurisdiction/service-type reference data and pure safety-window predicates the Governor calls
 - `forestrysupport.phase` — the service order's own lifecycle state machine (`:intake -> :survey -> :advise -> :treat -> :record -> :audit`); documentary/tracking, not a rollout-eligibility gate for the Governor
 - `forestrysupport.operation` — compiles the `langgraph-clj` `StateGraph`: intake → advise → govern → decide → commit | request-approval → commit | hold
-- `forestrysupport.sim` — demo runner (`clojure -M:run` / `clojure -M:dev:run`)
+- `forestrysupport.sim` — demo runner (`kbb -M:run` / `kbb -M:dev:run`)
 
 ## Scope
 
@@ -74,13 +74,13 @@ Any proposal for an operation outside this allowlist — most importantly anythi
 
 ```bash
 # Run full test suite (langgraph/langchain resolved via local sibling checkouts)
-clojure -M:dev:test
+kbb -M:dev:test
 
 # Check code quality
-clojure -M:lint
+kbb -M:lint
 
 # Run demo simulation -- drives the compiled StateGraph end-to-end
-clojure -M:dev:run
+kbb -M:dev:run
 ```
 
 `:dev` pins the transitive `langchain` dependency to the in-monorepo local checkout (`../../kotoba-lang/langchain`) for offline workspace development; a standalone fork should override `deps.edn`'s `:local/root` coordinates with git coordinates instead (see below).

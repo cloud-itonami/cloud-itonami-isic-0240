@@ -16,7 +16,7 @@
   `registry/operator-certification-expired?`. This file mirrors
   `forestrysupport.sim`'s relative epoch-ms helpers.
 
-  Usage: `clojure -M:dev:render-html [out-file]`."
+  Usage: `kbb -M:dev:render-html [out-file]`."
   (:require [kotoba.lang.text :as str]
             [forestrysupport.store :as store]
             [forestrysupport.operation :as op]
@@ -181,7 +181,7 @@
      "<main>\n"
      "  <section class=\"card\">\n"
      "    <h2>Service orders</h2>\n"
-     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>forestrysupport.store</code> via <code>forestrysupport.render-html</code> (<code>clojure -M:dev:render-html</code>), regenerated nightly. No invented data. Domain: <code>forestrysupport</code>.</p>\n"
+     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>forestrysupport.store</code> via <code>forestrysupport.render-html</code> (<code>kbb -M:dev:render-html</code>), regenerated nightly. No invented data. Domain: <code>forestrysupport</code>.</p>\n"
      "    <table>\n"
      "      <thead><tr><th>Order</th><th>Service type</th><th>Client forest operator</th><th>Flags</th><th>Last op status</th></tr></thead>\n"
      "      <tbody>\n"
