@@ -11,7 +11,7 @@
  ;; dependency already present in the resolved dep graph -- it does not
  ;; ADD a new one. With `:deps {}` there was nothing named
  ;; io.github.kotoba-lang/langgraph to override, so the override was
- ;; inert on every path (`clojure -M:run`, `-M:test`, plain `-M`) and no
+ ;; inert on every path (`kbb -M:run`, `-M:test`, plain `-M`) and no
  ;; real langgraph-clj StateGraph ever compiled or ran. Moving the real
  ;; coordinate to top-level :deps (the actually-used path) fixes this;
  ;; :dev now only does what its name says -- pin the *transitive*
@@ -28,7 +28,7 @@
   :dev {:override-deps
         {io.github.kotoba-lang/langchain
          {:local/root "../../kotoba-lang/langchain"}}}
-  ;; clojure -M:dev:run  -> drive the demo through one OperationActor
+  ;; kbb -M:dev:run  -> drive the demo through one OperationActor
   :run {:main-opts ["-m" "forestrysupport.sim"]}
   :render-html {:main-opts ["-m" "forestrysupport.render-html"]}
   :test {:extra-paths ["test"]
