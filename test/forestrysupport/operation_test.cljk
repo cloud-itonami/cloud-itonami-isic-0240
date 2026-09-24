@@ -18,7 +18,7 @@
   declared cost) -- not a hardcoded value -- genuinely drives the
   Governor's routing and what lands in the ledger, proven by swapping in
   custom `Advisor` implementations and observing the outcome change."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [langgraph.graph :as g]
             [forestrysupport.advisor :as advisor]
             [forestrysupport.operation :as operation]

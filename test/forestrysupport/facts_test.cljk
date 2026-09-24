@@ -1,5 +1,5 @@
 (ns forestrysupport.facts-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [forestrysupport.facts :as facts]))
 
 ;; ──────────────────────── Service-Type Lookups ──────────────────────

@@ -1,5 +1,5 @@
 (ns forestrysupport.governor-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [forestrysupport.governor :as governor]))
 
 (def ^:private now-ms #?(:clj (System/currentTimeMillis) :cljs (.now js/Date)))
