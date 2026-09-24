@@ -1,5 +1,5 @@
 (ns forestrysupport.store-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [forestrysupport.store :as store]))
 
 ;; ──────────────────────── Service-Order Retrieval ──────────────────────
