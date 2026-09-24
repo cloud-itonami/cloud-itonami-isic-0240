@@ -44,7 +44,7 @@
       haul-road load limit (it hauls no logs) -- the Governor's
       corresponding check is skipped entirely, never fabricated, when a
       given service type's field is nil."
-  (:require [clojure.set :as set]))
+  (:require [kotoba.lang.coll :as set]))
 
 (def service-types
   "Valid forestry-support-service categories and their safety windows.
